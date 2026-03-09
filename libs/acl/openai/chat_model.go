@@ -1138,8 +1138,9 @@ func byteSlice2int64(in []byte) []int64 {
 }
 
 type streamMessageBuilder struct {
-	audioCfg *Audio
-	audioID  string
+	audioCfg    *Audio
+	audioID     string
+	toolCallIDs map[int]string
 }
 
 func newStreamMessageBuilder(audio *Audio) *streamMessageBuilder {
@@ -1201,11 +1202,37 @@ func (b *streamMessageBuilder) build(resp openai.ChatCompletionStreamResponse) (
 		}
 
 		found = true
+		// 先处理流式 tool_calls：补全后续增量中缺失的 ID，保证同一次 tool_call 的 ID 一致
+		var toolCalls []schema.ToolCall
+		if len(choice.Delta.ToolCalls) > 0 {
+			if b.toolCallIDs == nil {
+				b.toolCallIDs = make(map[int]string)
+			}
+			for i := range choice.Delta.ToolCalls {
+				tc := &choice.Delta.ToolCalls[i]
+				if tc == nil {
+					continue
+				}
+				// OpenAI 的 Index 是 *int，缺失时视为 0
+				idx := 0
+				if tc.Index != nil {
+					idx = *tc.Index
+				}
+				// 记录第一次出现的 ID
+				if tc.ID != "" {
+					b.toolCallIDs[idx] = tc.ID
+				} else if id, ok := b.toolCallIDs[idx]; ok && id != "" {
+					// 后续增量补全缺失的 ID
+					tc.ID = id
+				}
+			}
+			toolCalls = toMessageToolCalls(choice.Delta.ToolCalls)
+		}
 
 		msg = &schema.Message{
 			Role:      toMessageRole(choice.Delta.Role),
 			Content:   choice.Delta.Content,
-			ToolCalls: toMessageToolCalls(choice.Delta.ToolCalls),
+			ToolCalls: toolCalls,
 			ResponseMeta: &schema.ResponseMeta{
 				FinishReason: string(choice.FinishReason),
 				Usage:        toEinoTokenUsage(resp.Usage),
