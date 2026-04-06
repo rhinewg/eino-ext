@@ -387,9 +387,10 @@ func toOpenAIToolCalls(toolCalls []schema.ToolCall) []openai.ToolCall {
 // buildMessageFromUserInputMultiContent builds a ChatCompletionMessage from UserInputMultiContent.
 // It processes various message parts like text, images, and audio, converting them into
 // the format expected by the OpenAI API.
+// Tool role is allowed so that Enhanced Tool results (e.g. PDF page images) can be sent on the tool message.
 func buildMessageFromUserInputMultiContent(inMsg *schema.Message) (openai.ChatCompletionMessage, error) {
-	if inMsg.Role != schema.User {
-		return openai.ChatCompletionMessage{}, errors.New("invalid role for UserInputMultiContent: role must be 'user'")
+	if inMsg.Role != schema.User && inMsg.Role != schema.Tool {
+		return openai.ChatCompletionMessage{}, errors.New("invalid role for UserInputMultiContent: role must be 'user' or 'tool'")
 	}
 
 	comMessage := openai.ChatCompletionMessage{

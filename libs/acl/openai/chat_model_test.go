@@ -586,6 +586,38 @@ func TestBuildMessageFromUserInputMultiContent(t *testing.T) {
 				},
 			},
 			{
+				name: "tool role with image (enhanced tool result)",
+				inMsg: &schema.Message{
+					Role:       schema.Tool,
+					ToolCallID: "call_abc",
+					UserInputMultiContent: []schema.MessageInputPart{
+						{Type: schema.ChatMessagePartTypeText, Text: text},
+						{
+							Type: schema.ChatMessagePartTypeImageURL,
+							Image: &schema.MessageInputImage{
+								MessagePartCommon: schema.MessagePartCommon{
+									Base64Data: &base64Data,
+									MIMEType:   "image/jpeg",
+								},
+							},
+						},
+					},
+				},
+				want: openai.ChatCompletionMessage{
+					Role:       openai.ChatMessageRoleTool,
+					ToolCallID: "call_abc",
+					MultiContent: []openai.ChatMessagePart{
+						{Type: openai.ChatMessagePartTypeText, Text: text},
+						{
+							Type: openai.ChatMessagePartTypeImageURL,
+							ImageURL: &openai.ChatMessageImageURL{
+								URL: "data:image/jpeg;base64,base64data",
+							},
+						},
+					},
+				},
+			},
+			{
 				name: "unsupported type",
 				inMsg: &schema.Message{
 					Role: schema.User,
