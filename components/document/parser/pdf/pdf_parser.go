@@ -25,7 +25,7 @@ import (
 
 	"github.com/cloudwego/eino/components/document/parser"
 	"github.com/cloudwego/eino/schema"
-	"github.com/dslipak/pdf"
+	"github.com/ledongthuc/pdf"
 )
 
 // 智能降级相关常量
